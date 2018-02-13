@@ -8,6 +8,7 @@ use Magento\Payment\Gateway\Http\TransferInterface;
 use Omise\Payment\Model\Config\Config;
 use Omise\Payment\Model\Omise;
 use Omise\Payment\Model\Api\Charge as ApiCharge;
+use Omise\Payment\Model\Data\Card;
 
 class Payment implements ClientInterface
 {
@@ -35,12 +36,16 @@ class Payment implements ClientInterface
      */
     protected $apiCharge;
 
+    protected $card;
+
     public function __construct(
         ApiCharge $apiCharge,
-        Omise     $omise
+        Omise     $omise,
+        Card $card
     ) {
         $this->omise     = $omise;
         $this->apiCharge = $apiCharge;
+        $this->card = $card;
     }
 
     /**
@@ -54,6 +59,8 @@ class Payment implements ClientInterface
         $this->omise->defineApiVersion();
         $this->omise->defineApiKeys();
 
-        return ['charge' => $this->apiCharge->create($transferObject->getBody())];
+        $params = $transferObject->getBody();
+        $payment_params = $this->card->createPaymentParams($params);
+        return ['charge' => $this->apiCharge->create($payment_params)];
     }
 }

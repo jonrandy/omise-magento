@@ -11,12 +11,16 @@ class OmiseDataAssignObserver extends AbstractDataAssignObserver
      * @var string
      */
     const OMISE_CARD_TOKEN = 'omise_card_token';
+    const OMISE_CARD_ID = 'omise_card_id';
+    const OMISE_SAVE_CARD = 'omise_save_card';
 
     /**
      * @var array
      */
     protected $additionalInformationList = [
-        self::OMISE_CARD_TOKEN
+        self::OMISE_CARD_TOKEN,
+        self::OMISE_CARD_ID,
+        self::OMISE_SAVE_CARD
     ];
 
     /**
@@ -34,7 +38,11 @@ class OmiseDataAssignObserver extends AbstractDataAssignObserver
 
         $paymentInfo = $this->readPaymentModelArgument($observer);
 
-        $paymentInfo->setOmiseCardToken($additionalData[self::OMISE_CARD_TOKEN]);
+        if(isset($additionalData[self::OMISE_CARD_TOKEN]))
+            $paymentInfo->setOmiseCardToken($additionalData[self::OMISE_CARD_TOKEN]);
+
+        if(isset($additionalData[self::OMISE_CARD_ID]))
+            $paymentInfo->setOmiseCardId($additionalData[self::OMISE_CARD_ID]);
 
         foreach ($this->additionalInformationList as $additionalInformationKey) {
             if (isset($additionalData[$additionalInformationKey])) {

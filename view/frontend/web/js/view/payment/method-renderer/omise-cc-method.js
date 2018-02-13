@@ -54,7 +54,9 @@ define(
                 return {
                     'method': this.item.method,
                     'additional_data': {
-                        'omise_card_token': this.omiseCardToken()
+                        'omise_card_token': this.omiseCardToken(),
+                        'omise_card_id': this.getOmiseCardId(),
+                        'omise_save_card': this.getOmiseSaveCard()
                     }
                 };
             },
@@ -68,6 +70,37 @@ define(
                 return window.checkoutConfig.payment.omise_cc.publicKey;
             },
 
+            getCards: function(){
+                return window.checkoutConfig.payment.omise_cc.cards;
+            },
+
+            hasCard: function(){
+                var cards = this.getCards();
+                return cards.length > 0;
+            },
+
+            setOmiseCardId: function(elm){
+                var element = $(elm);
+                $('.omise_card_wrap fieldset').css({display: 'none'});
+                element.closest('.omise_card_wrap').find('fieldset').css({display: 'block'});
+                return true;
+            },
+
+            getOmiseCardId: function(){
+                var form = $('#' + this.getCode() + 'Form');
+                var card_id = $('input[name="payment[omise_card_id]"]:checked', form).val();
+                return card_id;
+            },
+
+            getOmiseSaveCard: function () {
+                var form = $('#' + this.getCode() + 'Form');
+                var save_card = $('input[name="payment[omise_save_card]"]', form).is(":checked");
+                return save_card ? '1' : '0';
+            },
+
+            isCustomerLogin: function(){
+                return window.checkoutConfig.payment.omise_cc.is_login == 1;
+            },
             /**
              * Initiate observable fields
              *
@@ -81,9 +114,9 @@ define(
                         'omiseCardExpirationMonth',
                         'omiseCardExpirationYear',
                         'omiseCardSecurityCode',
-                        'omiseCardToken'
+                        'omiseCardToken',
+                        'omiseCardId'
                     ]);
-
                 return this;
             },
 
@@ -134,23 +167,66 @@ define(
              */
             generateTokenAndPerformPlaceOrderAction: function(data) {
                 var self = this;
+                var card_id = self.getOmiseCardId();
+                if(card_id){
+                    self.getPlaceOrderDeferredObject()
+                        .fail(
+                        function(response) {
+                            errorProcessor.process(response, self.messageContainer);
+                            fullScreenLoader.stopLoader();
+                            self.isPlaceOrderActionAllowed(true);
+                        }
+                    ).done(
+                        function(response) {
+                            if (self.isThreeDSecureEnabled()) {
+                                var serviceUrl = urlBuilder.createUrl(
+                                    '/orders/:order_id/omise-offsite',
+                                    {
+                                        order_id: response
+                                    }
+                                );
 
-                this.startPerformingPlaceOrderAction();
+                                storage.get(serviceUrl, false)
+                                    .fail(
+                                    function (response) {
+                                        errorProcessor.process(response, self.messageContainer);
+                                        fullScreenLoader.stopLoader();
+                                        self.isPlaceOrderActionAllowed(true);
+                                    }
+                                )
+                                    .done(
+                                    function (response) {
+                                        if (response) {
+                                            $.mage.redirect(response.authorize_uri);
+                                        } else {
+                                            errorProcessor.process(response, self.messageContainer);
+                                            fullScreenLoader.stopLoader();
+                                            self.isPlaceOrderActionAllowed(true);
+                                        }
+                                    }
+                                );
+                            } else if (self.redirectAfterPlaceOrder) {
+                                redirectOnSuccessAction.execute();
+                            }
+                        }
+                    );
+                } else {
+                    this.startPerformingPlaceOrderAction();
 
-                var card = {
-                    number           : this.omiseCardNumber(),
-                    name             : this.omiseCardHolderName(),
-                    expiration_month : this.omiseCardExpirationMonth(),
-                    expiration_year  : this.omiseCardExpirationYear(),
-                    security_code    : this.omiseCardSecurityCode()
-                };
+                    var card = {
+                        number           : this.omiseCardNumber(),
+                        name             : this.omiseCardHolderName(),
+                        expiration_month : this.omiseCardExpirationMonth(),
+                        expiration_year  : this.omiseCardExpirationYear(),
+                        security_code    : this.omiseCardSecurityCode()
+                    };
 
-                Omise.setPublicKey(this.getPublicKey());
-                Omise.createToken('card', card, function(statusCode, response) {
-                    if (statusCode === 200) {
-                        self.omiseCardToken(response.id);
-                        self.getPlaceOrderDeferredObject()
-                            .fail(
+                    Omise.setPublicKey(this.getPublicKey());
+                    Omise.createToken('card', card, function(statusCode, response) {
+                        if (statusCode === 200) {
+                            self.omiseCardToken(response.id);
+                            self.getPlaceOrderDeferredObject()
+                                .fail(
                                 function(response) {
                                     errorProcessor.process(response, self.messageContainer);
                                     fullScreenLoader.stopLoader();
@@ -168,33 +244,34 @@ define(
 
                                         storage.get(serviceUrl, false)
                                             .fail(
-                                                function (response) {
+                                            function (response) {
+                                                errorProcessor.process(response, self.messageContainer);
+                                                fullScreenLoader.stopLoader();
+                                                self.isPlaceOrderActionAllowed(true);
+                                            }
+                                        )
+                                            .done(
+                                            function (response) {
+                                                if (response) {
+                                                    $.mage.redirect(response.authorize_uri);
+                                                } else {
                                                     errorProcessor.process(response, self.messageContainer);
                                                     fullScreenLoader.stopLoader();
                                                     self.isPlaceOrderActionAllowed(true);
                                                 }
-                                            )
-                                            .done(
-                                                function (response) {
-                                                    if (response) {
-                                                        $.mage.redirect(response.authorize_uri);
-                                                    } else {
-                                                        errorProcessor.process(response, self.messageContainer);
-                                                        fullScreenLoader.stopLoader();
-                                                        self.isPlaceOrderActionAllowed(true);
-                                                    }
-                                                }
-                                            );
+                                            }
+                                        );
                                     } else if (self.redirectAfterPlaceOrder) {
                                         redirectOnSuccessAction.execute();
                                     }
                                 }
                             );
-                    } else {
-                        alert(response.message);
-                        self.stopPerformingPlaceOrderAction();
-                    }
-                });
+                        } else {
+                            alert(response.message);
+                            self.stopPerformingPlaceOrderAction();
+                        }
+                    });
+                }
             },
 
             /**
@@ -230,7 +307,10 @@ define(
              */
             validate: function () {
                 $('#' + this.getCode() + 'Form').validation();
-                
+                var isCardId = this.getOmiseCardId();
+                if(isCardId){
+                    return true;
+                }
                 var isCardNumberValid          = $('#' + this.getCode() + 'CardNumber').valid();
                 var isCardHolderNameValid      = $('#' + this.getCode() + 'CardHolderName').valid();
                 var isCardExpirationMonthValid = $('#' + this.getCode() + 'CardExpirationMonth').valid();
