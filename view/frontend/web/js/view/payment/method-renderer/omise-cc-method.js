@@ -101,6 +101,16 @@ define(
             isCustomerLogin: function(){
                 return window.checkoutConfig.payment.omise_cc.is_login == 1;
             },
+
+            checkSaveCard: function(){
+                var form = $('#' + this.getCode() + 'Form');
+                if(this.getOmiseSaveCard() == 1){
+                    $('input[name="payment[omise_save_card]"]', form).prop("checked", false);
+                } else {
+                    $('input[name="payment[omise_save_card]"]', form).prop("checked", true);
+                }
+            },
+
             /**
              * Initiate observable fields
              *
