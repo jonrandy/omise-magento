@@ -111,6 +111,12 @@ define(
                 }
             },
 
+            checkedByLabel: function(elm){
+                var element = $(elm);
+                var parent = element.parent();
+                $('input[type="checkbox"], input[type="radio"]', parent).trigger('click');
+            },
+
             /**
              * Initiate observable fields
              *

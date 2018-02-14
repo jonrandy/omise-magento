@@ -39,10 +39,10 @@
                 <!-- ko foreach: getCards() -->
                     <div class="omise_card_wrap">
                         <!-- ko ifnot: $index -->
-                            <input type="radio" name="payment[omise_card_id]" data-bind="click: $parent.setOmiseCardId.bind($data, $element), checkedValue: '', checked: '', value: value"/> <!-- ko text: label --><!-- /ko -->
+                            <input type="radio" name="payment[omise_card_id]" data-bind="click: $parent.setOmiseCardId.bind($data, $element), checkedValue: '', checked: '', value: value"/> <label  data-bind="click: $parent.checkedByLabel.bind($data, $element)"><!-- ko text: label --><!-- /ko --></label>
                         <!-- /ko -->
                         <!-- ko if: $index -->
-                            <input type="radio" name="payment[omise_card_id]" data-bind="click: $parent.setOmiseCardId.bind($data, $element), value: value"/> <!-- ko text: label --><!-- /ko -->
+                            <input type="radio" name="payment[omise_card_id]" data-bind="click: $parent.setOmiseCardId.bind($data, $element), value: value"/> <label data-bind="click: $parent.checkedByLabel.bind($data, $element)"><!-- ko text: label --><!-- /ko --></label>
                         <!-- /ko -->
                     </div>
                 <!-- /ko -->
@@ -50,7 +50,7 @@
             <div class="omise_card_wrap">
                 <!-- ko if: hasCard() -->
                 <div>
-                    <input type="radio" name="payment[omise_card_id]" data-bind="click: setOmiseCardId.bind($data, $element), value: ''"/> Create a charge using new card
+                    <input type="radio" name="payment[omise_card_id]" data-bind="click: setOmiseCardId.bind($data, $element), value: ''"/> <label data-bind="click: checkedByLabel.bind($data, $element)">Create a charge using new card</label>
                 </div>
                 <!-- /ko -->
                 <fieldset data-bind="attr: {class: 'fieldset payment items ccard ' + getCode(), id: 'payment_form_' + getCode()}, visible: !hasCard()">
@@ -148,7 +148,7 @@
                     </div>
                     <!-- ko if: isCustomerLogin() -->
                     <div class="field">
-                        <input type="checkbox" value="1" name="payment[omise_save_card]"/> <label data-bind="click: checkSaveCard()">Remember this card</label>
+                        <input type="checkbox" value="1" name="payment[omise_save_card]"/> <label data-bind="click: checkedByLabel.bind($data, $element)">Remember this card</label>
                     </div>
                     <!-- /ko -->
                 </fieldset>
