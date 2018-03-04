@@ -2,49 +2,35 @@
 
 namespace Omise\Payment\Model\Data;
 
-use Magento\Framework\App\ResourceConnection;
-use Magento\Customer\Model\Session as CustomerSession;
-use Magento\Customer\Model\Customer;
-use Omise\Payment\Model\Omise;
 use Omise\Payment\Gateway\Request\PaymentCcTokenBuilder;
+use Omise\Payment\Gateway\Request\PaymentCardBuilder;
 
 class Card
 {
-    const TABLE = 'omise_customer';
-
-    protected $resourceConnection;
-    protected $customerSession;
-    protected $customer;
-    protected $omise;
+    /**
+     * @var \Omise\Payment\Model\Data\Customer
+     */
+    protected $omiseCustomer;
 
     public function __construct(
-        ResourceConnection $resourceConnection,
-        CustomerSession $customerSession,
-        Customer $customer,
-        Omise $omise
-    ){
-        $this->resourceConnection = $resourceConnection;
-        $this->customerSession = $customerSession;
-        $this->customer = $customer;
-        $this->omise = $omise;
-    }
-
-    public function initEnvironment()
+        Customer  $omiseCustomer
+    )
     {
-        $this->omise->defineUserAgent();
-        $this->omise->defineApiVersion();
-        $this->omise->defineApiKeys();
-        return $this;
+        $this->omiseCustomer = $omiseCustomer;
     }
 
-    public function addCard($card_id){
-        $customerId = $this->getCustomerId();
-        if(!$customerId){
+    /**
+     * @param   string  $card_id
+     *
+     * @return  string|bool
+     */
+    public function addCard($card_id)
+    {
+        $omiseCustomer = $this->omiseCustomer->omiseCustomer();
+        if(! $omiseCustomer){
             return false;
         }
-        $omiseCustomer = $this->omiseCustomer();
-        if(!$omiseCustomer)
-            return false;
+
         try {
             $omiseCustomer->update([
                 'card' => $card_id
@@ -61,121 +47,34 @@ class Card
         }
     }
 
-    public function getCards(){
+    /**
+     * @return  \OmiseCardList
+     */
+    public function getCards()
+    {
 
-        $omiseCustomer = $this->omiseCustomer();
-        if(!$omiseCustomer)
+        $omiseCustomer = $this->omiseCustomer->omiseCustomer();
+        if(! $omiseCustomer){
             return false;
+        }
 
         return $omiseCustomer->getCards();
     }
 
-    public function getCustomerId(){
-        return $this->customerSession->getCustomerId();
-    }
-
-    public function getOmiseCustomerId(){
-        $customer_id = $this->getCustomerId();
-        if(!$customer_id)
-            return false;
-
-        $connection = $this->resourceConnection->getConnection();
-        $table = $this->resourceConnection->getTableName(self::TABLE);
-        $data = $connection->fetchRow("SELECT * FROM `$table` WHERE customer_id = :id", ['id' => $customer_id]);
-        return $data ? $data['omise_customer'] : false;
-    }
-
-    public function saveOmiseCustomerId($id){
-        $customer_id = $this->getCustomerId();
-        if(!$customer_id)
-            return false;
-
-        $connection = $this->resourceConnection->getConnection();
-        $table = $this->resourceConnection->getTableName(self::TABLE);
-        $exists = $connection->fetchRow("SELECT * FROM `$table` WHERE customer_id = :id", ['id' => $customer_id]);
-        if($exists){
-            $connection->query("UPDATE `$table` SET omise_customer = :omise_id WHERE customer_id = :id", [
-                'omise_id' => $id,
-                'id' => $customer_id
-            ]);
-        } else {
-            $connection->query("INSERT INTO `$table` (`omise_customer`, `customer_id`) VALUES (:omise_id, :id)", [
-                'omise_id' => $id,
-                'id' => $customer_id
-            ]);
-        }
-        return true;
-    }
-
-    public function createOmiseCustomer(){
-        $customer_id = $this->getCustomerId();
-        if(!$customer_id){
-            return false;
-        }
-        $this->initEnvironment();
-        $customer = $this->customer->load($customer_id);
-        $customer_name = $customer->getFirstname() . ' ' . $customer->getLastname();
-        $customer_name = trim($customer_name);
-        $customer_email = $customer->getEmail();
-        $data = [
-            'email' => $customer_email,
-            'description' => $customer_name
-        ];
-        $create = \OmiseCustomer::create($data);
-        if ( $create['object'] == "error" ) {
-            return false;
-        }
-        $id = $create['id'];
-        $this->saveOmiseCustomerId($id);
-        return $id;
-    }
-
-    public function getOmiseCustomer($id){
-        $this->initEnvironment();
-        try {
-            $customer = \OmiseCustomer::retrieve($id);
-            return $customer;
-        } catch (\Exception $e){
-            return false;
-        }
-    }
-
-    public function omiseCustomer()
+    /**
+     * @param   array   $params
+     *
+     * @return  array
+     */
+    public function createPaymentParams($params)
     {
-        $customerId = $this->getCustomerId();
-        if(!$customerId){
-            return false;
-        }
-        $this->initEnvironment();
-        $omise_customer_id = $this->getOmiseCustomerId();
+        $token      = $params[PaymentCcTokenBuilder::CARD];
+        $card_id    = $params[PaymentCardBuilder::CARD_ID];
+        $save_card  = $params[PaymentCardBuilder::SAVE_CARD];
 
-        if(!$omise_customer_id)
-            $omise_customer_id = $this->createOmiseCustomer();
-
-        if(!$omise_customer_id)
-            return false;
-
-        $omiseCustomer = $this->getOmiseCustomer($omise_customer_id);
-        if(!$omiseCustomer)
-            $omise_customer_id = $this->createOmiseCustomer();
-
-        if(!$omise_customer_id)
-            return false;
-
-        $omiseCustomer = $this->getOmiseCustomer($omise_customer_id);
-        if(!$omiseCustomer)
-            return false;
-
-        return $omiseCustomer;
-    }
-
-    public function createPaymentParams($params){
-        $token = $params[PaymentCcTokenBuilder::CARD];
-        $card_id = $params[PaymentCcTokenBuilder::CARD_ID];
-        $save_card = $params[PaymentCcTokenBuilder::SAVE_CARD];
         $payment_params = [];
         foreach($params as $key => $value){
-            if(in_array($key, [PaymentCcTokenBuilder::CARD, PaymentCcTokenBuilder::CARD_ID, PaymentCcTokenBuilder::SAVE_CARD])){
+            if(in_array($key, [PaymentCcTokenBuilder::CARD, PaymentCardBuilder::CARD_ID, PaymentCardBuilder::SAVE_CARD])){
                 continue;
             }
             $payment_params[$key] = $value;
@@ -184,11 +83,11 @@ class Card
             $card_id = $this->addCard($token);
         }
         if($card_id){
-            $customer_id = $this->getOmiseCustomerId();
+            $customer_id = $this->omiseCustomer->getOmiseCustomerId();
             $payment_params['customer'] = $customer_id;
-            $payment_params['card'] = $card_id;
+            $payment_params['card']     = $card_id;
         } else {
-            $payment_params['card'] = $token;
+            $payment_params['card']     = $token;
         }
 
         return $payment_params;

@@ -5,6 +5,7 @@ use Magento\Checkout\Model\ConfigProviderInterface;
 use Magento\Payment\Model\CcConfig as MagentoCcConfig;
 use Omise\Payment\Model\Config\Cc as OmiseCcConfig;
 use Omise\Payment\Model\Data\Card;
+use Omise\Payment\Model\Data\Customer;
 
 class CcConfigProvider implements ConfigProviderInterface
 {
@@ -17,17 +18,28 @@ class CcConfigProvider implements ConfigProviderInterface
      * @var \Omise\Payment\Model\Config\Cc
      */
     protected $omiseCcConfig;
-    protected $card;
+
+    /**
+     * @var \Omise\Payment\Model\Data\Card
+     */
+    protected $omiseCard;
+
+    /**
+     * @var \Omise\Payment\Model\Data\Customer
+     */
+    protected $omiseCustomer;
 
     public function __construct(
         MagentoCcConfig $magentoCcConfig,
-        OmiseCcConfig $omiseCcConfig,
-        Card $card
+        OmiseCcConfig   $omiseCcConfig,
+        Card            $omiseCard,
+        Customer        $omiseCustomer
     )
     {
         $this->magentoCcConfig = $magentoCcConfig;
         $this->omiseCcConfig   = $omiseCcConfig;
-        $this->card = $card;
+        $this->omiseCard       = $omiseCard;
+        $this->omiseCustomer   = $omiseCustomer;
     }
 
     /**
@@ -44,24 +56,27 @@ class CcConfigProvider implements ConfigProviderInterface
                     'years'  => [OmiseCcConfig::CODE => $this->magentoCcConfig->getCcYears()],
                 ],
                 OmiseCcConfig::CODE => [
-                    'publicKey'      => $this->omiseCcConfig->getPublicKey(),
-                    'offsitePayment' => $this->omiseCcConfig->is3DSecureEnabled(),
-                    'cards' => $this->getCards(),
-                    'is_login' => $this->card->getCustomerId() ? 1 : 0
+                    'publicKey'       => $this->omiseCcConfig->getPublicKey(),
+                    'offsitePayment'  => $this->omiseCcConfig->is3DSecureEnabled(),
+                    'cards'           => $this->getCards(),
+                    'isCustomerLogin' => $this->omiseCustomer->getCustomerId() ? 1 : 0
                 ],
             ]
         ];
     }
 
-    public function getCards(){
-        $cardList = $this->card->getCards();
+    /**
+     * @return  array
+     */
+    public function getCards()
+    {
+        $cardList = $this->omiseCard->getCards();
         $data = [];
         if($cardList){
             foreach($cardList['data'] as $card){
                 $label = $card['brand'] . ' xxxx' . $card['last_digits'];
-                $value = $card['id'];
                 $data[] = [
-                    'value' => $value,
+                    'value' => $card['id'],
                     'label' => $label
                 ];
             }

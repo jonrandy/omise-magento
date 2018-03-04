@@ -213,6 +213,7 @@
             <argument name="builders" xsi:type="array">
                 <item name="payment" xsi:type="string">Omise\Payment\Gateway\Request\PaymentDataBuilder</item>
                 <item name="cccard" xsi:type="string">Omise\Payment\Gateway\Request\PaymentCcTokenBuilder</item>
+                <item name="card" xsi:type="string">Omise\Payment\Gateway\Request\PaymentCardBuilder</item>
                 <item name="capture" xsi:type="string">Omise\Payment\Gateway\Request\PaymentAuthorizeBuilder</item>
             </argument>
         </arguments>
@@ -235,6 +236,7 @@
             <argument name="builders" xsi:type="array">
                 <item name="payment" xsi:type="string">Omise\Payment\Gateway\Request\PaymentDataBuilder</item>
                 <item name="cccard" xsi:type="string">Omise\Payment\Gateway\Request\PaymentCcTokenBuilder</item>
+                <item name="card" xsi:type="string">Omise\Payment\Gateway\Request\PaymentCardBuilder</item>
                 <item name="capture" xsi:type="string">Omise\Payment\Gateway\Request\PaymentAuthorizeCaptureBuilder</item>
             </argument>
         </arguments>

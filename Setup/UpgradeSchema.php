@@ -11,6 +11,12 @@ use Omise\Payment\Model\Data\Card;
 class UpgradeSchema implements UpgradeSchemaInterface
 {
 
+    /**
+     * @param   SchemaSetupInterface    $setup
+     * @param   ModuleContextInterface  $context
+     *
+     * @return  void
+     */
     public function upgrade(SchemaSetupInterface $setup, ModuleContextInterface $context)
     {
         $setup->startSetup();
